@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(FT_WACOH)
+project(ft_wacoh)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -128,15 +128,15 @@ include_directories(
 # add_dependencies(example_minimal_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-add_executable(minimal_publisher src/minimal_publisher.cpp)
-target_link_libraries(minimal_publisher ${catkin_LIBRARIES})
+add_executable(ft_wacoh_pub src/ft_wacoh_publisher.cpp)
+target_link_libraries(ft_wacoh_pub ${catkin_LIBRARIES})
 
-add_executable(minimal_publisher2 src/minimal_publisher2.cpp)
-target_link_libraries(minimal_publisher2 ${catkin_LIBRARIES})
+add_executable(ft_wacoh_pub_2 src/ft_wacoh_publisher_2.cpp)
+target_link_libraries(ft_wacoh_pub_2 ${catkin_LIBRARIES})
 
 
-add_executable(minimal_subscriber src/minimal_subscriber.cpp)
-target_link_libraries(minimal_subscriber ${catkin_LIBRARIES})
+add_executable(ft_wacoh_sub src/ft_wacoh_subscriber.cpp)
+target_link_libraries(ft_wacoh_sub ${catkin_LIBRARIES})
 
 
 ## Add cmake target dependencies of the executable
