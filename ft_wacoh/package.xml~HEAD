@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>FT_WACOH</name>
+  <name>ft_wacoh</name>
   <version>0.0.0</version>
   <description>The example_minimal_node package</description>
 

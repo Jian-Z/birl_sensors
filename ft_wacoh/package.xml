@@ -2,7 +2,7 @@
 <package>
   <name>ft_wacoh</name>
   <version>0.0.0</version>
-  <description>The example_minimal_node package</description>
+  <description>driver, publisher, and subscriber for the Wacoh FT sensor in ROS.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
