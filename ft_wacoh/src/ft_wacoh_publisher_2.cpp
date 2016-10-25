@@ -24,6 +24,7 @@
 #define sensitive_My 1500.45
 #define sensitive_Mz 1155.94
 
+
 //function printf error
 void error(const char *msg)
 {
@@ -65,18 +66,20 @@ int main(int argc, char **argv)
      //  #define h_addr  h_addr_list[0]  /* address, for backward compatiblity */
   //};
   // */
-
+    char a[]="10.0.0.5";
+    char b[]="5001";
+   
 
     char buffer[256];
-    if (argc < 3) {
+    /*  if (argc < 3) {
        fprintf(stderr,"usage %s hostname port\n", argv[0]);
        exit(0);
-    }
-    portno = atoi(argv[2]);
+       }*/
+    portno = atoi(b);
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) 
         error("ERROR opening socket");
-    server = gethostbyname(argv[1]);
+    server = gethostbyname(a);
     //Takes such a name as an argument and returns a pointer to a hostent containing information about that host
     if (server == NULL) {
         fprintf(stderr,"ERROR, no such host\n");
@@ -93,13 +96,13 @@ int main(int argc, char **argv)
         error("ERROR connecting");
     //The connect function is called by the client to establish a connection to the server
 
-    printf("Please enter the message: ");
+    //printf("Please enter the message: ");
 
     bzero(buffer,256);
-    fgets(buffer,255,stdin);
+    //fgets(buffer,255,stdin);
     //uses fgets to read the message from stdin
     
-    nc = write(sockfd,buffer,strlen(buffer));
+    nc = write(sockfd,"OOO",3);
     //writes the message to the socket
 
     if (nc < 0) 
@@ -146,7 +149,7 @@ int main(int argc, char **argv)
     if (nc < 0) 
          error("ERROR reading from socket");
 
-      printf("%s\n",buffer); //debug the buffer string
+    //printf("%s\n",buffer); //debug the buffer string
 
       //  mystring.data = buffer;  
     
