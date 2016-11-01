@@ -4,6 +4,7 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
 #include <geometry_msgs/Wrench.h>
+#include <geometry_msgs/WrenchStamped.h>
 
 #include <math.h>
 #include <stdio.h> 
@@ -20,7 +21,10 @@
 
 // Sensor's total number of steps for all axis
 #define STEP_SZ 8193
-// Sensitivy for the sensor's "step"
+
+// Sensitivy for the sensor's "step". 
+// TODO: these numbers need to be recalibrated with each new setup. 
+// TODO: write a calibration routine.
 #define SENSITIVITY_Fx 26.98
 #define SENSITIVITY_Fy 28.68
 #define SENSITIVITY_Fz 31.70
@@ -117,7 +121,8 @@ int main(int argc, char **argv) {
   ros::Subscriber wrench_sub = n.subscribe("/wrench/bias",1,correctBias);
 
   // Wrench and String type.
-  geometry_msgs::Wrench myWrench,myWrench_unbiased,myWrench_biased; 
+  geometry_msgs::Wrench myWrench;
+  geometry_msgs::WrenchStamped myWrench_unbiased,myWrench_biased; 
 
   // ROS Rates
   int rate=200;
@@ -202,20 +207,20 @@ int main(int argc, char **argv) {
       
       // Unbiased Wrench (no-offset)
       // 8193 is number of steps steps in sensor. SENSITIVITY_XX means the sensitivity for that step.
-      myWrench_unbiased.force.x  = (myWrench.force.x-STEP_SZ)/SENSITIVITY_Fx;
-      myWrench_unbiased.force.y  = (myWrench.force.y-STEP_SZ)/SENSITIVITY_Fy;
-      myWrench_unbiased.force.z  = (myWrench.force.z-STEP_SZ)/SENSITIVITY_Fz;
-      myWrench_unbiased.torque.x = (myWrench.torque.x-STEP_SZ)/SENSITIVITY_Mx;
-      myWrench_unbiased.torque.y = (myWrench.torque.y-STEP_SZ)/SENSITIVITY_My;
-      myWrench_unbiased.torque.z = (myWrench.torque.z-STEP_SZ)/SENSITIVITY_Mz;
+      myWrench_unbiased.wrench.force.x  = (myWrench.force.x-STEP_SZ)/SENSITIVITY_Fx;
+      myWrench_unbiased.wrench.force.y  = (myWrench.force.y-STEP_SZ)/SENSITIVITY_Fy;
+      myWrench_unbiased.wrench.force.z  = (myWrench.force.z-STEP_SZ)/SENSITIVITY_Fz;
+      myWrench_unbiased.wrench.torque.x = (myWrench.torque.x-STEP_SZ)/SENSITIVITY_Mx;
+      myWrench_unbiased.wrench.torque.y = (myWrench.torque.y-STEP_SZ)/SENSITIVITY_My;
+      myWrench_unbiased.wrench.torque.z = (myWrench.torque.z-STEP_SZ)/SENSITIVITY_Mz;
 
       // Offset set only if flag initialBias is true and the averaging period has been completed
-      myWrench_biased.force.x  = offset.force.x  + myWrench_unbiased.force.x;
-      myWrench_biased.force.y  = offset.force.y  + myWrench_unbiased.force.y;
-      myWrench_biased.force.z  = offset.force.z  + myWrench_unbiased.force.z;
-      myWrench_biased.torque.x = offset.torque.x + myWrench_unbiased.torque.x;
-      myWrench_biased.torque.y = offset.torque.y + myWrench_unbiased.torque.y;
-      myWrench_biased.torque.z = offset.torque.z + myWrench_unbiased.torque.z;
+      myWrench_biased.wrench.force.x  = offset.force.x  + myWrench_unbiased.wrench.force.x;
+      myWrench_biased.wrench.force.y  = offset.force.y  + myWrench_unbiased.wrench.force.y;
+      myWrench_biased.wrench.force.z  = offset.force.z  + myWrench_unbiased.wrench.force.z;
+      myWrench_biased.wrench.torque.x = offset.torque.x + myWrench_unbiased.wrench.torque.x;
+      myWrench_biased.wrench.torque.y = offset.torque.y + myWrench_unbiased.wrench.torque.y;
+      myWrench_biased.wrench.torque.z = offset.torque.z + myWrench_unbiased.wrench.torque.z;
 
       // Check for bias adjustment (this should only be done at the beginning of the task once)
       if(initialBias) 
@@ -223,12 +228,12 @@ int main(int argc, char **argv) {
           ROS_INFO_STREAM("Computing offset. Please wait for " << biasTime << " seconds before offset is activated.");
         
           if (ctr<period) {// keep 10 seconds of data
-            tempOffsetBuffer[0]+=myWrench_unbiased.force.x;
-            tempOffsetBuffer[1]+=myWrench_unbiased.force.y;
-            tempOffsetBuffer[2]+=myWrench_unbiased.force.z;
-            tempOffsetBuffer[3]+=myWrench_unbiased.torque.x;
-            tempOffsetBuffer[4]+=myWrench_unbiased.torque.y;
-            tempOffsetBuffer[5]+=myWrench_unbiased.torque.z;  
+            tempOffsetBuffer[0]+=myWrench_unbiased.wrench.force.x;
+            tempOffsetBuffer[1]+=myWrench_unbiased.wrench.force.y;
+            tempOffsetBuffer[2]+=myWrench_unbiased.wrench.force.z;
+            tempOffsetBuffer[3]+=myWrench_unbiased.wrench.torque.x;
+            tempOffsetBuffer[4]+=myWrench_unbiased.wrench.torque.y;
+            tempOffsetBuffer[5]+=myWrench_unbiased.wrench.torque.z;  
             
             // Increment counter
             ctr++;
@@ -250,6 +255,10 @@ int main(int argc, char **argv) {
             ctr=0;
           }
         }
+
+      // Add time stampe
+      myWrench_unbiased.header.stamp = ros::Time::now();
+      myWrench_biased.header.stamp   = ros::Time::now();
 
       // Publish all wrench related info: unbiased, offset, and biased.
       wrench_pub.publish(myWrench_unbiased);
