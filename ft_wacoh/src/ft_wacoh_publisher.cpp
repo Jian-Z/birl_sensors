@@ -220,7 +220,7 @@ int main(int argc, char **argv) {
       // Check for bias adjustment (this should only be done at the beginning of the task once)
       if(initialBias) 
         {
-          ROS_INFO_STREAM("Computing offset. Please wait for " << period << " seconds before offset is activated.");
+          ROS_INFO_STREAM("Computing offset. Please wait for " << biasTime << " seconds before offset is activated.");
         
           if (ctr<period) {// keep 10 seconds of data
             tempOffsetBuffer[0]+=myWrench_unbiased.force.x;
