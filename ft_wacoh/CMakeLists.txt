@@ -131,10 +131,6 @@ include_directories(
 add_executable(ft_wacoh_pub src/ft_wacoh_publisher.cpp)
 target_link_libraries(ft_wacoh_pub ${catkin_LIBRARIES})
 
-add_executable(ft_wacoh_pub_2 src/ft_wacoh_publisher_2.cpp)
-target_link_libraries(ft_wacoh_pub_2 ${catkin_LIBRARIES})
-
-
 add_executable(ft_wacoh_sub src/ft_wacoh_subscriber.cpp)
 target_link_libraries(ft_wacoh_sub ${catkin_LIBRARIES})
 

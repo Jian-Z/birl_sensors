@@ -16,7 +16,7 @@ Under your IP settings, under Ipv4, use the following settings:
 - Open a terminal:
 - Ping the FT sensor by issuing the following command:
 ````
-ping 10.0.0.5
+ping 10.0.0.2
 ````
 
 4. Make the Node
