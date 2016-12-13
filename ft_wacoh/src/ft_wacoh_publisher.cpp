@@ -133,22 +133,25 @@ int main(int argc, char **argv) {
   // ROS Wrapper  ======================================================================
 
   ros::init(argc,argv,"ft_wacoh"); 	// name of this node will be ""Forcesensor_publisher"
+
   ros::NodeHandle n; 															                                              
-  ros::Publisher  wrench_pub = n.advertise<geometry_msgs::WrenchStamped>("/wrench/unbiased",100);      // wrench with no offset
-  ros::Publisher  offset_pub = n.advertise<geometry_msgs::Wrench>("/wrench/bias/",100);         // computed offset
-  ros::Publisher  offsetWrench_pub = n.advertise<geometry_msgs::WrenchStamped>("/wrench/biased",100);  // wrench with offset
-  ros::Publisher  filtered_wrench_pub_ = n.advertise<geometry_msgs::WrenchStamped>("/wrench/filtered",100);
+  ros::Publisher  wrench_pub           = n.advertise<geometry_msgs::WrenchStamped>("/wrench/unbiased",100);      // wrench with no offset
+  ros::Publisher  offset_pub           = n.advertise<geometry_msgs::Wrench>("/wrench/offset/",100);                // computed offset
+  ros::Publisher  offsetWrench_pub     = n.advertise<geometry_msgs::WrenchStamped>("/wrench/biased",100);        // wrench with offset
+  ros::Publisher  filtered_wrench_pub_ = n.advertise<geometry_msgs::WrenchStamped>("/wrench/filtered",100);      // filtered and biased
+
   ros::Subscriber wrench_sub = n.subscribe("/wrench/bias",1,correctBias);
 
   // Wrench and String type.
-  geometry_msgs::Wrench myWrench;
-  geometry_msgs::WrenchStamped myWrench_unbiased,myWrench_biased;
+  geometry_msgs::Wrench        myWrench;
   geometry_msgs::WrenchStamped fw;
+  geometry_msgs::WrenchStamped myWrench_unbiased,myWrench_biased;
+
 
   // ROS Rates
-  int rate=200;
-  double period=rate*biasTime;          // Total time for averaging period to calculate offset
-  ros::Rate loopRate(rate); 	       		// Create a ros::Rate object. Set the time for a 1Hz sleeper timer.
+  int       rate=200;
+  double    period=rate*biasTime;          // Total time for averaging period to calculate offset
+  ros::Rate loopRate(rate); 	       		   // Create a ros::Rate object. Set the time for a 1Hz sleeper timer.
   int i,num,temp;
 
   while(ros::ok()) //work loop		        
@@ -234,84 +237,8 @@ int main(int argc, char **argv) {
       myWrench_unbiased.wrench.torque.x = (myWrench.torque.x-STEP_SZ)/SENSITIVITY_Mx;
       myWrench_unbiased.wrench.torque.y = (myWrench.torque.y-STEP_SZ)/SENSITIVITY_My;
       myWrench_unbiased.wrench.torque.z = (myWrench.torque.z-STEP_SZ)/SENSITIVITY_Mz;
-
-      // Offset set only if flag initialBias is true and the averaging period has been completed
-      myWrench_biased.wrench.force.x  = offset.force.x  + myWrench_unbiased.wrench.force.x;
-      myWrench_biased.wrench.force.y  = offset.force.y  + myWrench_unbiased.wrench.force.y;
-      myWrench_biased.wrench.force.z  = offset.force.z  + myWrench_unbiased.wrench.force.z;
-      myWrench_biased.wrench.torque.x = offset.torque.x + myWrench_unbiased.wrench.torque.x;
-      myWrench_biased.wrench.torque.y = offset.torque.y + myWrench_unbiased.wrench.torque.y;
-      myWrench_biased.wrench.torque.z = offset.torque.z + myWrench_unbiased.wrench.torque.z;
-
-      // some objects of vector using in filter
-      cur_data_ = Eigen::VectorXd::Zero(6);
-      cur_data_f_ = Eigen::VectorXd::Zero(6);
-      Eigen::VectorXd temp = Eigen::VectorXd::Zero(6);
-
-      // assigning the value of myWrench_biased to cur_data
-      cur_data_ << myWrench_biased.wrench.force.x, myWrench_biased.wrench.force.y, myWrench_biased.wrench.force.z, myWrench_biased.wrench.torque.x, myWrench_biased.wrench.torque.y, myWrench_biased.wrench.torque.y; 
-
-      /******************************** Filtering *******************************/
-        if(wrenchFilteringFlag)
-          {
-            // If this is the first loop we need to insert two rows with equal values as the current iteration for both wrenchVec and wrenchVecF
-            if(initialFiltering)
-              {
-                for(int i=0; i<2; i++)
-                  {
-                    // Input wrench at the end of the vector
-                    wrenchVec.push_back(cur_data_);               
-
-                    // Filtered wrench at the end of the vector
-                    wrenchVecF.push_back(cur_data_);
-                  }
-                // Change Flag
-                initialFiltering=false;
-              }
-
-            // Copy new data to wrenchVec at the end of the vector
-            wrenchVec.push_back(cur_data_);
-
-            // Assuming a vector of size(3) Time entries are:0,1,2 Element [2] is the current one (sitting at the back), element t-1 is [1], sitting in the middle, and element t-2 is[0]. 
-            // The indeces are opposite to what you think it should be. 
-            for(int i=0; i<6; i++)
-              temp(i) = 0.018299*wrenchVec[2](i) + 0.036598*wrenchVec[1](i) + 0.018299*wrenchVec[0](i) + 1.58255*wrenchVecF[1](i) - 0.65574*wrenchVecF[0](i);
-
-            // Add new filtered result
-            wrenchVecF.push_back(temp);
-
-            // Pop last value from these two structures to keep the size of the vector to 3 throughout
-            wrenchVec.pop_front();
-            wrenchVecF.pop_front();
-          
-
-        // Set filterd value to private member
-        for(int i=0; i<6; i++)
-          cur_data_f_(i) = wrenchVecF[0](i);
-
-        // Time Stamp
-        fw.header.stamp = ros::Time::now();
-
-        // Wrench
-        fw.wrench.force.x  = cur_data_f_(0); 
-        fw.wrench.force.y  = cur_data_f_(1); 
-        fw.wrench.force.z  = cur_data_f_(2); 
-        fw.wrench.torque.x = cur_data_f_(3); 
-        fw.wrench.torque.y = cur_data_f_(4); 
-        fw.wrench.torque.z = cur_data_f_(5); 
-
-        // Republish. Leading to system crash..
-        if(filtered_wrench_pub_flag)
-          {
-            filtered_wrench_pub_.publish(fw);  
-            // ROS_INFO_STREAM("Publishing the filtered wrench: " << fw.wrench << std::endl);
-          }
-
-      
-  }
-      
-
-// Check for bias adjustment (this should only be done at the beginning of the task once)
+    
+      // Check for bias adjustment (this should only be done at the beginning of the task once)
       if(initialBias) 
         {
           ROS_INFO_STREAM("Computing offset. Please wait for " << biasTime << " seconds before offset is activated.");
@@ -345,6 +272,14 @@ int main(int argc, char **argv) {
           }
         }
 
+      // Offset set only if flag initialBias is true and the averaging period has been completed
+      myWrench_biased.wrench.force.x  = -offset.force.x + myWrench_unbiased.wrench.force.x;
+      myWrench_biased.wrench.force.y  = -offset.force.y  + myWrench_unbiased.wrench.force.y;        
+      myWrench_biased.wrench.force.z  = -offset.force.z  + myWrench_unbiased.wrench.force.z;
+      myWrench_biased.wrench.torque.x = -offset.torque.x + myWrench_unbiased.wrench.torque.x;
+      myWrench_biased.wrench.torque.y = -offset.torque.y + myWrench_unbiased.wrench.torque.y;
+      myWrench_biased.wrench.torque.z = -offset.torque.z + myWrench_unbiased.wrench.torque.z;
+
       // Add time stampe
       myWrench_unbiased.header.stamp = ros::Time::now();
       myWrench_biased.header.stamp   = ros::Time::now();
@@ -353,6 +288,81 @@ int main(int argc, char **argv) {
       wrench_pub.publish(myWrench_unbiased);
       offset_pub.publish(offset);
       offsetWrench_pub.publish(myWrench_biased);
+
+
+      /******************************** Filtering *******************************/
+
+      // some objects of vector using in filter
+      cur_data_            = Eigen::VectorXd::Zero(6);
+      cur_data_f_          = Eigen::VectorXd::Zero(6);
+      Eigen::VectorXd temp = Eigen::VectorXd::Zero(6);
+
+      if(wrenchFilteringFlag)
+        {
+
+          // assigning the value of myWrench_biased to cur_data
+          cur_data_ << myWrench_biased.wrench.force.x, 
+            myWrench_biased.wrench.force.y, 
+            myWrench_biased.wrench.force.z, 
+            myWrench_biased.wrench.torque.x, 
+            myWrench_biased.wrench.torque.y, 
+            myWrench_biased.wrench.torque.z; 
+
+          // If this is the first iteration, we want to create two copies for both wrenchVec and wrenchVecF, before we use the current value for filter processing
+          if(initialFiltering)
+            {
+              for(int i=0; i<2; i++)
+                {
+                  // Input wrench at the end of the vector
+                  wrenchVec.push_back(cur_data_);               
+
+                  // Filtered wrench at the end of the vector
+                  wrenchVecF.push_back(cur_data_);
+                }
+              // Change Flag
+              initialFiltering=false;
+            }
+
+          // Copy new data to wrenchVec at the end of the vector
+          wrenchVec.push_back(cur_data_);
+
+          // Assuming a vector of size(3) Time entries are:0,1,2 Element [2] is the current one (sitting at the back), element t-1 is [1], sitting in the middle, and element t-2 is[0]. 
+          // Filter = AWt + BWt-1 + Ct-2 + DYt-1 + EYt
+          for(int i=0; i<6; i++)
+            temp(i) = 0.018299*wrenchVec[2](i) + 0.036598*wrenchVec[1](i) + 0.018299*wrenchVec[0](i) + 1.58255*wrenchVecF[1](i) - 0.65574*wrenchVecF[0](i);
+
+          // Add new filtered result
+          wrenchVecF.push_back(temp);
+
+          // Pop last value from these two structures to keep the size of the vector to 3 throughout
+          wrenchVec.pop_front();
+          wrenchVecF.pop_front();
+          
+          // Set filterd value to private member
+          for(int i=0; i<6; i++)
+            cur_data_f_(i) = wrenchVecF[1](i);
+
+          // Time Stamp
+          fw.header.stamp = ros::Time::now();
+
+          // Wrench
+          fw.wrench.force.x  = cur_data_f_(0); 
+          fw.wrench.force.y  = cur_data_f_(1); 
+          fw.wrench.force.z  = cur_data_f_(2); 
+          fw.wrench.torque.x = cur_data_f_(3); 
+          fw.wrench.torque.y = cur_data_f_(4); 
+          fw.wrench.torque.z = cur_data_f_(5); 
+
+          // Republish. Leading to system crash..
+          if(filtered_wrench_pub_flag)
+            {
+              filtered_wrench_pub_.publish(fw);  
+              ROS_DEBUG_STREAM("Publishing the filtered wrench: " << fw.wrench << std::endl);
+            }
+
+      
+        }
+
 
       loopRate.sleep();			  
       ros::spinOnce();
