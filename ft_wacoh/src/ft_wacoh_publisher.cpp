@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
   ros::Publisher  wrench_pub = n.advertise<geometry_msgs::WrenchStamped>("/wrench/unbiased",100);      // wrench with no offset
   ros::Publisher  offset_pub = n.advertise<geometry_msgs::Wrench>("/wrench/bias/",100);         // computed offset
   ros::Publisher  offsetWrench_pub = n.advertise<geometry_msgs::WrenchStamped>("/wrench/biased",100);  // wrench with offset
-  ros::Publisher  filtered_wrench_pub_ = n.advertise<geometry_msgs::WrenchStamped>("/wrench/filter",100);
+  ros::Publisher  filtered_wrench_pub_ = n.advertise<geometry_msgs::WrenchStamped>("/wrench/filtered",100);
   ros::Subscriber wrench_sub = n.subscribe("/wrench/bias",1,correctBias);
 
   // Wrench and String type.
