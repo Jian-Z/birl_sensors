@@ -45,16 +45,21 @@
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
+#include "std_msgs/Float64.h"
 #include "geometry_msgs/WrenchStamped.h"
 #include "robotiq_force_torque_sensor/rq_sensor_state.h"
 #include "robotiq_force_torque_sensor/ft_sensor.h"
 #include "robotiq_force_torque_sensor/sensor_accessor.h"
+
+// new service used by shuangqi
+#include "std_srvs/Trigger.h"
 
 static void decode_message_and_do(INT_8 const  * const buff, INT_8 * const ret);
 static void wait_for_other_connection(void);
 static int max_retries_(100);
 
 ros::Publisher sensor_pub_acc;
+bool do_wrench_calibration;
 
 /**
  * \brief Decode the message received and do the associated action
@@ -99,6 +104,26 @@ bool receiverCallback(robotiq_force_torque_sensor::sensor_accessor::Request& req
 	return true;
 }
 
+
+bool wrenchCalibrationSrvCallback(
+    std_srvs::Trigger::Request& req,
+	std_srvs::Trigger::Response& res) {
+	ROS_INFO("Begin wrench calibration.");
+    
+    do_wrench_calibration = true;
+
+    while (do_wrench_calibration) {
+        ROS_INFO("Wrench calibration not done...waiting");
+        ros::Duration(1).sleep();
+    }
+
+	res.success = true;
+	res.message = std::string("boring message");
+	ROS_INFO("Wrench calibration done.");
+	return true;
+}
+
+
 /**
  * \fn static void wait_for_other_connection()
  * \brief Each second, checks for a sensor that has been connected
@@ -118,8 +143,6 @@ static void wait_for_other_connection(void)
 			ROS_INFO("Sensor connected!");
 			break;
 		}
-
-		ros::spinOnce();
 	}
 }
 
@@ -177,9 +200,28 @@ int main(int argc, char **argv)
 	ros::Publisher wrench_pub = n.advertise<geometry_msgs::WrenchStamped>("robotiq_force_torque_wrench", 512);
 	ros::ServiceServer service = n.advertiseService("robotiq_force_torque_sensor_acc", receiverCallback);
 
+    // service used by shuangqi
+	ros::ServiceServer wrench_calibration_service = n.advertiseService("robotiq_wrench_calibration_service", wrenchCalibrationSrvCallback);
+    std_msgs::Float64 offset_fx, offset_fy, offset_fz;
+    offset_fx.data = 0; 
+    offset_fy.data = 0; 
+    offset_fz.data = 0; 
+
+    std_msgs::Float64 sample_fx, sample_fy, sample_fz;
+    sample_fx.data = 0; 
+    sample_fy.data = 0; 
+    sample_fz.data = 0; 
+    int calibration_sample_amount = 10;
+    int calibration_sample_count = 0;
+
 	//std_msgs::String msg;
 	geometry_msgs::WrenchStamped wrenchMsg;
 	ros::param::param<std::string>("~frame_id", wrenchMsg.header.frame_id, "robotiq_force_torque_frame_id");
+
+    // we want to two spin threads, one for each service
+    ros::AsyncSpinner spinner(2);
+    spinner.start();
+
 
 	ROS_INFO("Starting Sensor");
 	while(ros::ok())
@@ -202,17 +244,41 @@ int main(int argc, char **argv)
 
 				//compose WrenchStamped Msg
 				wrenchMsg.header.stamp = ros::Time::now();
-				wrenchMsg.wrench.force.x = msgStream.Fx;
-				wrenchMsg.wrench.force.y = msgStream.Fy;
-				wrenchMsg.wrench.force.z = msgStream.Fz;
+				wrenchMsg.wrench.force.x = msgStream.Fx-offset_fx.data;
+				wrenchMsg.wrench.force.y = msgStream.Fy-offset_fy.data;
+				wrenchMsg.wrench.force.z = msgStream.Fz-offset_fz.data;
+
 				wrenchMsg.wrench.torque.x = msgStream.Mx;
 				wrenchMsg.wrench.torque.y = msgStream.My;
 				wrenchMsg.wrench.torque.z = msgStream.Mz;
+
+                if (do_wrench_calibration) {
+                    if (calibration_sample_count < calibration_sample_amount) {
+                        ROS_INFO("Wrench calibration sampling");
+                        sample_fx.data += wrenchMsg.wrench.force.x;
+                        sample_fy.data += wrenchMsg.wrench.force.y;
+                        sample_fz.data += wrenchMsg.wrench.force.z;
+                        calibration_sample_count += 1;
+                    }
+                    else {
+                        ROS_INFO("Wrench calibration setting offsets");
+                        offset_fx.data += sample_fx.data/calibration_sample_amount;
+                        offset_fy.data += sample_fy.data/calibration_sample_amount;
+                        offset_fz.data += sample_fz.data/calibration_sample_amount;
+                        sample_fx.data = 0; 
+                        sample_fy.data = 0; 
+                        sample_fz.data = 0; 
+                        calibration_sample_count = 0;
+                        do_wrench_calibration = false;
+                    }
+                }
+
 				wrench_pub.publish(wrenchMsg);
 			}
 		}
-
-		ros::spinOnce();
 	}
+
+    spinner.stop();
+
 	return 0;
 }
