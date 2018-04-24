@@ -59,7 +59,7 @@ static void wait_for_other_connection(void);
 static int max_retries_(100);
 
 ros::Publisher sensor_pub_acc;
-bool do_wrench_calibration;
+bool do_wrench_calibration = false;
 
 /**
  * \brief Decode the message received and do the associated action
@@ -112,7 +112,7 @@ bool wrenchCalibrationSrvCallback(
     
     do_wrench_calibration = true;
 
-    while (do_wrench_calibration) {
+    while (do_wrench_calibration && ros::ok()) {
         ROS_INFO("Wrench calibration not done...waiting");
         ros::Duration(1).sleep();
     }
@@ -276,6 +276,8 @@ int main(int argc, char **argv)
 				wrench_pub.publish(wrenchMsg);
 			}
 		}
+        // Do do spinOnce since we're using spinner now.
+        // ros::spinOnce();
 	}
 
     spinner.stop();
