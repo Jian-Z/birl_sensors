@@ -21,6 +21,9 @@ include_directories(
   ${robotiq_action_server_INCLUDE_DIRS}
 )
 
+# Flag to avoid libboost errors
+add_compile_options(-std=c++11)
+
 # The action server
 add_executable(robotiq_c_model_action_server_node
     src/robotiq_c_model_action_server_node.cpp

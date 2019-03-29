@@ -6,6 +6,9 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
 )
 
+# Flag to avoid libboost errors
+add_compile_options(-std=c++11)
+
 catkin_package(
    INCLUDE_DIRS include
    LIBRARIES robotiq_ethercat

@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 2.8.3)
 project(robotiq_c_model_control)
 find_package(catkin REQUIRED COMPONENTS robotiq_ethercat roscpp rospy message_generation)
 
+# Flag to avoid libboost errors
+add_compile_options(-std=c++11)
+add_compile_options(-lboost_thread-mt)
+
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)

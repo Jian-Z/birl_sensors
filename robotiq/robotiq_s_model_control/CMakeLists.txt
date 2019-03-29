@@ -8,6 +8,9 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
+# Flag to avoid libboost errors
+add_compile_options(-std=c++11)
+
 ###################################
 ## catkin message generation     ##
 ###################################
@@ -38,6 +41,9 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${robotiq_ethercat_INCLUDE_DIRS}
 )
+
+# Flag to avoid libboost errors
+add_compile_options(-std=c++11)
 
 add_executable(s_model_ethercat_node
   src/robotiq_s_model_control/s_model_ethercat_node.cpp
